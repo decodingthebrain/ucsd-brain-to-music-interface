@@ -44,7 +44,7 @@ pygame.mixer.set_num_channels(instruments * 3)
 def boot_sequence():
     booting = True
     start_time = pygame.time.get_ticks()
-    duration = rand.randint(4000, 5000)  # 4.5 seconds for the boot sequence
+    duration = 2800 
 
     point_one = []
     point_two = []
@@ -71,7 +71,7 @@ def boot_sequence():
             t = elapsed / 2 % 1400
             x = t
             y_one = math.sin(t/(rand.randint(25, 75))) * (rand.randint(10, 100)) + 200 # 50 is frequency, 100 is amplitude, 200 is vertical shift
-            y_two = math.sin(t/(rand.randint(25, 75))) *  (rand.randint(10, 100)) + 400
+            y_two = math.cos(t/(rand.randint(25, 75))) *  (rand.randint(10, 100)) + 400
             y_three = math.sin(t/(rand.randint(25, 75))) * (rand.randint(10, 100)) + 600
 
             point_one.append((x, y_one))
@@ -79,24 +79,21 @@ def boot_sequence():
             point_three.append((x, y_three))
 
             if len(point_one) > 1:
-                pygame.draw.circle(screen, (0,255,255), (x, y_one), 5)
+                # draw line
+                pygame.draw.lines(screen, (0,255,255), False, point_one, 5)
+
             if len(point_two) > 1:
-                pygame.draw.circle(screen, (0,255,255), (x, y_two), 5)
+                # draw line
+                pygame.draw.lines(screen, (0,255,255), False, point_two, 5)
             if len(point_three) > 1:
-                pygame.draw.circle(screen, (0,255,255), (x, y_three), 5)
+                pygame.draw.lines(screen, (0,255,255), False, point_three, 5)
             title_text = boot_font.render("Loading", True, white)
             
             screen.blit(title_text, (WIDTH//2 - title_text.get_width()//2, HEIGHT//2 - 20))
             
         else:
-            if len(point_one) > 1:
-                pygame.draw.circle(screen, (0,255,255), (x, y_one), 5)
-            if len(point_two) > 1:
-                pygame.draw.circle(screen, (0,255,255), (x, y_two), 5)
-            if len(point_three) > 1:
-                pygame.draw.circle(screen, (0,255,255), (x, y_three), 5)
-
-            title_text = boot_font.render("Loading Complete", True, white)
+          
+            title_text = boot_font.render("Loading Complete", True, (0,255,255))
             
             screen.blit(title_text, (WIDTH//2 - title_text.get_width()//2, HEIGHT//2 - 20))
 
