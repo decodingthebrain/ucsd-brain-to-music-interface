@@ -1,7 +1,7 @@
 ## Directory
 
 
-# DB-BMI: 
+# DB-BMI.py: 
 Python script built by PscyhoPy Builder that runs the stimulus we want to present to the participants
 
 To-Do: incorporate piEEG serial ports to be able to record EEG data from the piEEG dry cap
@@ -19,7 +19,7 @@ To-Do: review how it works and what it's doing
 # dur_song_diversity_100.csv
 Spreadsheet of song names, relative file path of mp3 songs in my (Enrique's) computer, and the duration of each songs (currently not in use)
 
-# data folder
+# data (folder)
 Contains the unofficial recording sessions. 
 
 To-Do: Test our filtering/preprocessing methods and test the quality of EEG data we get from the dry electrode piEEG caps.
