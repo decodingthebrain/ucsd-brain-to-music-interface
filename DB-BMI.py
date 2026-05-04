@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 This experiment was created using PsychoPy3 Experiment Builder (v2026.1.3),
-    on Fri May  1 15:20:27 2026
+    on Mon May  4 11:10:53 2026
 If you publish work using this script the most relevant publication is:
 
     Peirce J, Gray JR, Simpson S, MacAskill M, Höchenberger R, Sogo H, Kastman E, Lindeløv JK. (2019) 
@@ -32,6 +32,96 @@ import sys  # to get file system encoding
 
 from psychopy.hardware import keyboard
 
+# Run 'Before Experiment' code from pieegRecord
+import spidev
+import threading
+import csv as csv_module
+import time
+import os
+from psychopy import core
+from gpiozero import DigitalInputDevice
+
+# --- Hardware Constants ---
+DRDY_PIN = 24  
+VREF = 4.5
+GAIN = 24
+
+# --- Pi 5 GPIO Setup ---
+drdy = DigitalInputDevice(DRDY_PIN, pull_up=True, active_state=False)
+
+# --- PiEEG SPI Setup ---
+spi = spidev.SpiDev()
+spi.open(0, 0)
+spi.max_speed_hz = 2000000
+spi.mode = 0b01
+
+# --- SPI Initialization ---
+spi.xfer2([0x06])   # RESET
+time.sleep(0.1)
+spi.xfer2([0x11])   # SDATAC
+time.sleep(0.1)
+spi.xfer2([0x43, 0x00, 0xE0]) # CONFIG3
+time.sleep(0.01)
+spi.xfer2([0x45, 0x07, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60]) # GAIN=24
+time.sleep(0.01)
+spi.xfer2([0x10])   # RDATAC
+time.sleep(0.1)
+
+# --- Threading Variables ---
+eeg_stop_event = threading.Event()
+eeg_data = []
+eeg_lock = threading.Lock()
+eeg_thread = None
+drdy_timeouts = 0  # Tracks timing drift/glitches
+
+# --- Failsafe Cleanup ---
+def cleanup_spi():
+    eeg_stop_event.set()
+    if eeg_thread is not None:
+        eeg_thread.join(timeout=1.0)
+    try:
+        spi.close()
+        drdy.close() # Free GPIO to prevent hanging on exit
+    except:
+        pass
+runAtExit.append(cleanup_spi)
+
+def record_eeg():
+    global eeg_data, drdy_timeouts
+    sample_count = 0
+    
+    while not eeg_stop_event.is_set():
+        # Polling: Wait up to 0.1s for DRDY
+        drdy.wait_for_active(timeout=0.1)
+        
+        if not drdy.is_active:
+            drdy_timeouts += 1  # Log dropped sample / glitch
+            continue 
+            
+        raw = spi.readbytes(51) 
+        timestamp = core.getTime()
+        channels = []
+        
+        for ch in range(16): 
+            byte1 = raw[3 + ch * 3]
+            byte2 = raw[4 + ch * 3]
+            byte3 = raw[5 + ch * 3]
+            val = (byte1 << 16) | (byte2 << 8) | byte3
+            
+            if val >= 0x800000:
+                val -= 0x1000000
+            uv = val * (VREF / GAIN / (2**23 - 1)) * 1e6
+            channels.append(round(uv, 4))
+            
+        with eeg_lock:
+            eeg_data.append([timestamp] + channels)
+            
+        sample_count += 1
+        
+        # Lightweight Real-Time Monitoring (Outputs to PsychoPy Runner Console)
+        # Prints a heartbeat every 250 samples (~1 second)
+        if sample_count % 250 == 0:
+            print(f"[PiEEG Heartbeat] {sample_count} samples. Ch1: {channels[0]:.2f} uV | Timeouts: {drdy_timeouts}")
 # --- Setup global variables (available in all functions) ---
 # create a device manager to handle hardware (keyboards, mice, mirophones, speakers, etc.)
 deviceManager = hardware.DeviceManager()
@@ -401,7 +491,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         pos=(0, 0), draggable=False, height=0.05, wrapWidth=None, ori=0.0, 
         color='white', colorSpace='rgb', opacity=None, 
         languageStyle='LTR',
-        depth=0.0);
+        depth=-1.0);
     # set audio backend
     sound.Sound.backend = 'ptb'
     song1 = sound.Sound(
@@ -685,6 +775,15 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         CloseEyes_Song.status = NOT_STARTED
         continueRoutine = True
         # update component parameters for each repeat
+        # Run 'Begin Routine' code from pieegRecord
+        with eeg_lock:
+            eeg_data.clear()
+        
+        drdy_timeouts = 0 # Reset glitch tracker for this trial
+        eeg_stop_event.clear()
+        
+        eeg_thread = threading.Thread(target=record_eeg, daemon=True)
+        eeg_thread.start()
         CloseEyesText.setText('Please close your eyes\n\nThe song will begin to play shortly\n')
         song1.setSound(filePath, hamming=True)
         song1.setVolume(1.0, log=False)
@@ -822,6 +921,42 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         for thisComponent in CloseEyes_Song.components:
             if hasattr(thisComponent, "setAutoDraw"):
                 thisComponent.setAutoDraw(False)
+        # Run 'End Routine' code from pieegRecord
+        # 1. Stop the thread gracefully
+        eeg_stop_event.set()
+        
+        if eeg_thread is not None:
+            eeg_thread.join(timeout=2.0) 
+        
+        # 2. Extract data safely under lock, then release lock immediately
+        with eeg_lock:
+            data_to_save = list(eeg_data) # Create a static copy
+            eeg_data.clear()              # Clear main list for next trial
+        
+        # 3. Perform slow File I/O outside of the lock
+        if data_to_save:
+            os.makedirs('data', exist_ok=True)
+            song_basename = os.path.splitext(os.path.basename(filePath))[0]
+            eeg_filename = f"data/{expInfo['participant']}_{expName}_trial{trials.thisN}_{song_basename}_eeg.csv"
+            
+            with open(eeg_filename, 'w', newline='') as f:
+                writer = csv_module.writer(f)
+                writer.writerow([
+                    'timestamp_s', 
+                    'ch1_uV', 'ch2_uV', 'ch3_uV', 'ch4_uV', 
+                    'ch5_uV', 'ch6_uV', 'ch7_uV', 'ch8_uV',
+                    'ch9_uV', 'ch10_uV', 'ch11_uV', 'ch12_uV', 
+                    'ch13_uV', 'ch14_uV', 'ch15_uV', 'ch16_uV'
+                ])
+                writer.writerows(data_to_save)
+                    
+            thisExp.addData('eeg_file', eeg_filename)
+            thisExp.addData('eeg_samples', len(data_to_save))
+            thisExp.addData('drdy_timeouts', drdy_timeouts) # Log dropped frames
+        else:
+            thisExp.addData('eeg_file', 'NO_DATA')
+            thisExp.addData('eeg_samples', 0)
+            thisExp.addData('drdy_timeouts', drdy_timeouts)
         # store stop times for CloseEyes_Song
         CloseEyes_Song.tStop = globalClock.getTime(format='float')
         CloseEyes_Song.tStopRefresh = tThisFlipGlobal
@@ -1301,6 +1436,12 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
     else:
         routineTimer.addTime(-5.000000)
     thisExp.nextEntry()
+    # Run 'End Experiment' code from pieegRecord
+    try:
+        spi.close()
+        drdy.close()
+    except:
+        pass
     
     # mark experiment as finished
     endExperiment(thisExp, win=win)
