@@ -1,2 +1,4 @@
 .env.dev
 backend/data/SEED_dataset/
+backend/notebooks/eeg_emotion_recognition_seed.ipynb
+backend/data/eeg_emotion_recognition_seed/
