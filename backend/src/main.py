@@ -8,13 +8,17 @@ import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 # Gemini API for song recommendation
 from google import genai
-
+# turn jpg image to base 64 bytes
+import base64
 
 # import secrets
 secrets = dotenv_values('../../.env.dev')
 
 # list of permissions needed to access user information
-SCOPE_LIST=['user-read-currently-playing','user-modify-playback-state','user-read-playback-state', 'user-read-private', 'playlist-modify-public', 'playlist-modify-private']
+SCOPE_LIST=['user-read-currently-playing','user-modify-playback-state','user-read-playback-state', 'user-read-private', 'playlist-modify-public', 'playlist-modify-private', 'ugc-image-upload']
+
+# path to DB logo
+IMAGE_PATH = '../../frontend/media/db-black-tiny.jpg'
 
 # access spotify api using credentials
 sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id=secrets['SPOTIFY_CLIENT_ID'],
@@ -70,7 +74,7 @@ if camelot_mode:
 def spotify_playlist_creation():
     user_id = sp.current_user()["id"]
     playlist_name = "Your Stream"
-    playlist_description = "This playlist was brought to you by the Decoded Brain. Your Stream will be saved to this playlist as you listen"
+    playlist_description = "Brought to you by the Decoded Brain at UC San Diego. Your Stream will be saved to this playlist as you listen"
 
     new_playlist = sp.user_playlist_create(
         user=user_id,
@@ -89,6 +93,16 @@ if sp.current_user_playing_track() and sp.current_user_playing_track().get('is_p
 
 stream_id = spotify_playlist_creation()
 sp.playlist_add_items(playlist_id=stream_id, items=song_to_add)
+# upload cover image
+with open(IMAGE_PATH, "rb") as image_file:
+    # read raw bytes and convert as Base64 bytes, then decode to string
+    encoded_string = base64.b64encode(image_file.read()).decode("utf-8")
+try:
+    sp.playlist_upload_cover_image(stream_id, encoded_string)
+    print("Cover art uploaded successful.")
+except Exception as e:
+    print(f"An error occurred: {e}")
+
 
 # run mode
 # runs while count is still above 0
@@ -136,4 +150,4 @@ while count > 0:
 print("=" * 40)
 print("List of songs played during your Stream: \n")
 for i in range(len(recently_played)):
-    print(f"{i}. {recently_played[i]}")
+    print(f"{i+1}. {recently_played[i]}")
