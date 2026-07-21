@@ -26,7 +26,7 @@ client_secret=secrets['SPOTIFY_CLIENT_SECRET'], redirect_uri=secrets['SPOTIFY_RE
 
 # counter for how many songs to be added to queue
 # subtracts by 1 after every song
-count=3
+count=4
 # list of recently played songs for Gemini to avoid
 recently_played=[]
 
@@ -58,7 +58,7 @@ def calculate_time_left(track):
 # run song suggestion prompt
 def run_prompt(prompt):
     interaction = client.interactions.create(
-        model = 'gemini-3.5-flash',
+        model = 'gemini-3-flash-preview', # switched from gemini-3.5-flash, will try gemini-2.5-flash for higher ceiling
         input = prompt
     )
     return interaction.output_text
@@ -73,7 +73,7 @@ if camelot_mode:
 # returns playlist id
 def spotify_playlist_creation():
     user_id = sp.current_user()["id"]
-    playlist_name = "Your Stream"
+    playlist_name = "Spanish Stream - First Test"
     playlist_description = "Brought to you by the Decoded Brain at UC San Diego. Your Stream will be saved to this playlist as you listen"
 
     new_playlist = sp.user_playlist_create(
@@ -92,6 +92,8 @@ if sp.current_user_playing_track() and sp.current_user_playing_track().get('is_p
     song_to_add.append(first_song_uri)
 
 stream_id = spotify_playlist_creation()
+stream_name = "Your Stream #" + stream_id[-4:]
+sp.playlist_change_details(playlist_id=stream_id, name=stream_name) # change title to Your Stream #abcd
 sp.playlist_add_items(playlist_id=stream_id, items=song_to_add)
 # upload cover image
 with open(IMAGE_PATH, "rb") as image_file:
@@ -146,6 +148,10 @@ while count > 0:
             print(f"Could not find a playable song on Spotify for: {new_song_title} by {new_song_artist}")
 
 # SUMMARY SECTION
+
+new_playlist_title = run_prompt(f"View the songs listed in {recently_played} and write a title for that playlist. Output ONLY the title name, nothing else.")
+sp.playlist_change_details(playlist_id=stream_id, name=new_playlist_title) # change title to AI-generated title based on songs
+
 
 print("=" * 40)
 print("List of songs played during your Stream: \n")
