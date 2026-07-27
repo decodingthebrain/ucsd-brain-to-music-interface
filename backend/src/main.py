@@ -1,8 +1,6 @@
 ## Imports
 
 # for security importing keys
-from backend.src.main import stream_id
-from backend.src.main import recently_played
 from dotenv import dotenv_values
 # Spotify API for Python
 import spotipy
@@ -48,6 +46,7 @@ count = 15 # Gemini API only allows up to 20 requests per day, 1 is needed for p
 # list of recently played songs for Gemini to avoid
 recently_played = []
 
+stream_id = ""
 # time left variable initialization
 time_left = 0
 
