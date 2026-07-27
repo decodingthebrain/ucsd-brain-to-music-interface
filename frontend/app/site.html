@@ -9,16 +9,13 @@
     <style>
         /* Include Styling here
         format:*/
-
+        
         body {
-            font-family: 'Oswald', sans-serif;
-            background: linear-gradient(167deg, #8985ff, #25244d);
-            background-size: 100% 100%;
-            /* adjusts height to make the gradient stretch and transition smoothly*/
-            background-repeat: no-repeat;
-            /*makes sure it doesn't repeat*/
-            min-height: 100vh;
-            /*ensures body is at least viewport height*/
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(to bottom, #8985ff, #25244d);
+            background-size: 100% 100%; /* adjusts height to make the gradient stretch and transition smoothly*/
+            background-repeat: no-repeat; /*makes sure it doesn't repeat*/
+            min-height: 100vh; /*ensures body is at least viewport height*/
             /*
             margin
             padding
@@ -28,53 +25,26 @@
         }
 
         .title {
-            color: black;
-            font-size: 44px;
-            font-weight: 700;
-            /* test using : npx live-server . --port=8080 and view it here: http://localhost:8080/frontend/app/site.html */
+            color:gray;
+            font-size:24px;
         }
 
-        .subtitle {
-            color: black;
-            font-size: 34px;
+        .subtitle{
+            color:gray;
+            font-size:18px;
         }
+
+        
+        
+        
     </style>
 </head>
 
-<body class="min-h-screen flex flex-col items-center justify-center p-4">
-    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-        <header class="text-center m-12">
-            <h1 class="title">Brain DJ Interface: Remixed</h1>
-            <h2 class="subtitle">Produced by Decoded Brain at UC San Diego</h2>
-        </header>
-
-        <div class="text-center flex-container m-32">
-            <button id="start-button-control"
-                class="bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg transition hover:scale-105 py-3 px-6">
-                Start your Stream...
-            </button>
-        </div>
-
-        <div class="text-center m-8">
-            <h1 class="title" id="status-title">
-                Status
-            </h1>
-        </div>
-        <div class="grid grid-cols-2 md:grid-cols-2 gap-6" id="song-list">
-            <div class="bg-gray-100 p-4 rounded">Song 1</div>
-            <div class="bg-gray-100 p-4 rounded">Song 2</div>
-            <div class="bg-gray-100 p-4 rounded">Song 3</div>
-            <div class="bg-gray-100 p-4 rounded">Song 4</div>
-            <div class="bg-gray-100 p-4 rounded">Song 5</div>
-            <div class="bg-gray-100 p-4 rounded">Song 6</div>
-
-        </div>
-    </div>
-
-
-
-
-
+<body>
+    <section id="hero">
+        <!--   <div class="container">  -->
+        <h1 class="title">Brain DJ Interface: Remixed</h1>
+        <h2 class="subtitle">Produced by Decoded Brain at UC San Diego</h2>
 
 
 
